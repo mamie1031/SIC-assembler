@@ -198,7 +198,7 @@ int main()
 		}
 	}
 	
-
+	printf("\n");
 	
 	//Pass2
 	for(i=start;i<endLine;i++) //從start的下一行開始 
@@ -213,6 +213,7 @@ int main()
 			{
 				for(j=8;j<24;j++)
 					objcode[i][j]=0;
+				binToHex(objcode[i],obj_16[i]);
 				
 			}
 			else
@@ -244,11 +245,13 @@ int main()
 						{
 							decToBin(tempdisp,objcode[i],8,24);
 							objcode[i][8]=1;	//set x=1
+							binToHex(objcode[i],obj_16[i]);
 						} 
 						else if(tempdisp==-1)
 						{
 							for(j=8;j<24;j++)
 								objcode[i][j]=0;
+							binToHex(objcode[i],obj_16[i]);
 							printf("teamp_opp[i]:%s\n",temp_opp[i]); 
 							printf("[ERROR]：Undefined symbol!!!\n");
 						}
@@ -266,21 +269,16 @@ int main()
 				{
 					
 					int tempdisp=inSymTab(opper[i]);
-//					printf("\ntemp:%X\n",tempdisp);
 					if(tempdisp>=0)//Found
 					{
 						decToBin(tempdisp,objcode[i],8,23);
-//						printf("objcode[i],8,23:");
-//						for(j=8;j<24;j++)
-//						{
-//							printf("%d",objcode[i][j]);
-//						}
-//						printf("\n");
+						binToHex(objcode[i],obj_16[i]);
 					} 
 					else if(tempdisp==-1)
 					{
 						for(j=8;j<24;j++)
 							objcode[i][j]=0;
+						binToHex(objcode[i],obj_16[i]);
 						printf("opper:%s\n",opper[i]); 
 						printf("[ERROR]：Undefined symbol!!!\n");
 					}
@@ -291,8 +289,8 @@ int main()
 			
 			
 		}
-		else if (strcmp(instr[i],"BYTE")==0 || 
-				strcmp(instr[i],"WORD")==0)
+		else if (strcmp(instr[i],"BYTE")==0 )
+				
 		{
 			if(opper[i][0]==67)
 			{
@@ -301,30 +299,94 @@ int main()
 					j++;
 				j++;
 				int iForObj=0;
+				
 				while(opper[i][j] !=39)
 				{
 					int ascii=opper[i][j];
-					decToBin(ascii,objcode[i],iForObj,iForObj+3);
+					decToBin(ascii,objcode[i],iForObj,iForObj+7);
 					j++;
-					iForObj+=4;
+					iForObj+=8;
 				}
-	
+				binToHex(objcode[i],obj_16[i]);
 			}
-//			else(strcmp(opper[i][0],"X")==0)
-//			{
-//				
-//			}
+			else if(opper[i][0]==88)
+			{
+				int iForObj16=0;
+				j=1;
+				while(opper[i][j] !=39)
+					j++;
+				j++;
+				while(opper[i][j] !=39)
+				{
+					obj_16[i][iForObj16]=opper[i][j];
+					iForObj16++;
+					j++;
+				}
+					
+				
+			}
 			
 		
 		}
-		
-		printf("\ninstru:%s\n",instr[i]);
-		for(j=0;j<24;j++)
-			printf("%d",objcode[i][j]);
-		printf("\n");
-		
-		printf("\ninstru:%s\n",instr[i]);
-		binToHex(objcode[i],obj_16[i]);
+		else if(strcmp(instr[i],"WORD")==0)
+		{
+			j=0;
+			int sum=0,len=strlen(opper[i]),n;
+			while(len>0)
+			{
+//				printf("sum:%d\n",sum);
+				sum+=(opper[i][j]-48)*pow(10,len-1);
+				
+				j++;
+				len--;
+			}
+//			printf("sum:%d\n",sum);
+			n=sum;
+			j= 5;
+			while(n>0)
+			{
+				if((n%16)>=0&&(n%16)<16)
+					obj_16[i][j]= n%16+48;
+				else
+				{
+					switch (n%16)
+					{
+						case 10:
+							obj_16[i][j]= 65;
+							break;
+						case 11:
+							obj_16[i][j]= 66;
+							break;
+						case 12:
+							obj_16[i][j]= 67;
+							break;
+						case 13:
+							obj_16[i][j]= 68;
+							break;
+						case 14:
+							obj_16[i][j]= 69;
+							break;
+						case 15:
+							obj_16[i][j]= 70;
+							break;
+					
+					}
+				}
+				n/=16;
+				j--;
+			}
+			while(j>=0)
+			{
+				obj_16[i][j]=48;
+				j--;
+			}
+		}
+	}
+	
+	printf("-----Pass2-----\n");
+	for(i=0;i<endLine-1;i++)
+	{
+		printf("%X\t%s\t%s\t%s\t",loc[i],label[i],instr[i],opper[i]);
 		for(j=0;j<6;j++)
 		{
 			
@@ -332,11 +394,14 @@ int main()
 		}
 			
 		printf("\n");
-
 	}
+	printf("\t%s\t%s\t%s\t",label[endLine-1],instr[endLine-1],opper[endLine-1]);
+		for(j=0;j<6;j++)
+			printf("%c",obj_16[i][j]);
+	printf("\n");
 	
-//	printf()
-
+	
+	
 	
 	return 0;
 } 
@@ -475,55 +540,6 @@ int hexToDec(char ch[10])
 	
 }
 
-
-
-
-//void decToHex(int n,char* ch)
-//{
-//	int num=n,temp[2],i=0,j;
-//	
-//	while(num>0)
-//	{
-//		temp[i]=num%16;
-//		num /=16;
-//		i++;
-//	}
-//	for(j=0;j<i;j++)
-//	{
-//		if(temp<16 && temp[j]>=0)
-//		{
-//			ch+= 48 + temp[j];
-//		}
-//		else
-//		{
-//			switch (temp[j])
-//			{
-//				case 10:
-//					ch+= 65;
-//					break;
-//				case 11:
-//					ch+= 66;
-//					break;
-//				case 12:
-//					ch= 67;
-//					break;
-//				case 13:
-//					ch= 68;
-//					break;
-//				case 14:
-//					ch= 69;
-//					break;
-//				case 15:
-//					ch= 70;
-//					break;
-//					
-//			}
-//		}
-//	}
-//		
-//	
-//	
-//}
 
 int opNum(char ch[])
 {
