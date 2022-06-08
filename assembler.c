@@ -23,7 +23,7 @@ char obj_16[100][6];
 
 int main()
 {
-	FILE *fptr1,*fptr2;
+	FILE *fptr1,*fptr2, *fptr3;
 	char label[100][10],instr[100][10],opper[100][10];
 
 	int error=0;
@@ -65,6 +65,13 @@ int main()
 	{
 		printf("Error!");
 	}
+	
+	fptr3 = fopen("intermidiate.txt", "w");
+	if(fptr3 == NULL)
+	{
+		printf("Error!");
+	}
+	
 	read_ver(fptr2,label,instr,opper);
 	
 	i=0;
@@ -179,6 +186,15 @@ int main()
 	}
 		printf("\t%s\t%s\t%s\n",label[endLine-1],instr[endLine-1],opper[endLine-1]);
 	 
+	for(i=0;i<endLine-1;i++)	//寫入檔案，產生中間檔 
+	{
+		fprintf(fptr3,"%X\t%s\t%s\t%s\n",loc[i], label[i],instr[i],opper[i]);
+	}
+		fprintf(fptr3,"\t%s\t%s\t%s\n",label[endLine-1],instr[endLine-1],opper[endLine-1]);
+	 
+	
+	
+	
 	
 	printf("---Symbol Table---\n");
 	for(i=0;i<sym_index;i++)
