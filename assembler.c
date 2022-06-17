@@ -19,17 +19,19 @@ int symadd[100]; //以十進位保存symbol的位址
 int sym_index=0;
 int objcode[100][24];//存放二進位 
 int addr[100];
-char obj_16[100][6];
+char obj_16[100][7];
 
 int main()
 {
-	FILE *fptr1,*fptr2, *fptr3;
+	FILE *fptr1,*fptr2, *fptr3, *fpass2, *final;
 	char label[100][10],instr[100][10],opper[100][10];
 
 	int error=0;
 	int i,j,endLine=0,locctr=0,start;
 	int loc[100];//存取以十進位表示之loc
 	char temp[10]="";
+	
+
  
 	
 	//初始化各個參數
@@ -44,8 +46,11 @@ int main()
 		loc[i]=0;
 		for(j=0;j<24;j++)
 			objcode[i][j]=0;
+		strcpy(obj_16[i],"");
+	
 	} 
 	
+	//將opcode讀入 
 	fptr1 = fopen("opcode.txt", "r");
 	if(fptr1 == NULL)
 	{
@@ -71,6 +76,16 @@ int main()
 	{
 		printf("Error!");
 	}
+	fpass2 = fopen("pass2_source.txt", "w");
+	if(fpass2 == NULL)
+	{
+		printf("Error!");
+	}
+	final = fopen("Object_program.txt", "w");
+	if(final == NULL)
+	{
+		printf("Error!");
+	}
 	
 	read_ver(fptr2,label,instr,opper);
 	
@@ -80,7 +95,6 @@ int main()
 		i++;
 	}
 	endLine=i+1;
-//	printf("Endline:%d",endLine);
 	
 	for(i=0;i<endLine;i++)
 	{
@@ -96,8 +110,8 @@ int main()
 		}
 	}
 	
-	i=start;//代表第幾行 
-	while(strcmp(instr[i],"END")!=0)
+
+	for(i=start;i<endLine;i++) 
 	{
 		if(strcmp(label[i],"")!=0)
 		{
@@ -166,20 +180,22 @@ int main()
 				len=(bound[1]-bound[0]-1)/2;
 			}
 			locctr+=len;
-		}
-		
-		else if((strcmp(instr[i++],"END"))==0)
-		{
-			break;
-		}
-		else
-		{
-			error=1;
-		}
-		i++;
+		}	
+//		else if((strcmp(instr[i++],"END"))==0)
+//		{
+//			break;
+//		}
+//		else
+//		{
+//			error=1;
+//		}
 	}
-	//輸出結果 
-	
+	 
+	//發生錯誤終止程式 
+	if(error)
+		exit(EXIT_SUCCESS);
+		
+	//輸出結果
 	for(i=0;i<endLine-1;i++)
 	{
 		printf("%X\t%s\t%s\t%s\n",loc[i], label[i],instr[i],opper[i]);
@@ -216,6 +232,7 @@ int main()
 	
 	printf("\n");
 	
+	
 	//Pass2
 	for(i=start;i<endLine;i++) //從start的下一行開始 
 	{
@@ -229,28 +246,28 @@ int main()
 			{
 				for(j=8;j<24;j++)
 					objcode[i][j]=0;
-				binToHex(objcode[i],obj_16[i]);
-				
+				binToHex(objcode[i],obj_16[i]);	
 			}
 			else
 			{
-				char* check=strstr(opper[i],",");//檢查是否有"," 
+				//檢查opperand是否有"," 
+				char* check=strstr(opper[i],",");
 				if(check)
 				{
 					//分割字串 
 					char temp_opp[2][10];
 					char *ptr = strtok(opper[i],",");
-					i=0;
+					int k=0;
 					while(ptr!=NULL)
 					{
-						strcpy(temp_opp[i],ptr);
+						strcpy(temp_opp[k],ptr);
 						ptr = strtok(NULL,",");
-						i++;
+						k++;
 					}
-					if(i>2)	//大於兩項，輸入格式錯誤 
+					if(k>2)	//大於兩項，輸入格式錯誤 
 					{
 						error=1;
-						printf("ERROR!!\n");
+						printf("[ERROR]:Format error!!!\n");
 						break;
 					}
 					if(strcmp(temp_opp[1],"X")==0)
@@ -275,7 +292,7 @@ int main()
 					else
 					{
 						error=1;
-						printf("ERROR!!\n");
+						printf("[ERROR]:Format error!!!\n");
 						break;
 					}
 					
@@ -305,10 +322,9 @@ int main()
 			
 			
 		}
-		else if (strcmp(instr[i],"BYTE")==0 )
-				
+		else if (strcmp(instr[i],"BYTE")==0 )		
 		{
-			if(opper[i][0]==67)
+			if(opper[i][0]==67)	//第一個字是C 
 			{
 				j=1;
 				while(opper[i][j] !=39)
@@ -338,11 +354,7 @@ int main()
 					iForObj16++;
 					j++;
 				}
-					
-				
 			}
-			
-		
 		}
 		else if(strcmp(instr[i],"WORD")==0)
 		{
@@ -350,13 +362,10 @@ int main()
 			int sum=0,len=strlen(opper[i]),n;
 			while(len>0)
 			{
-//				printf("sum:%d\n",sum);
 				sum+=(opper[i][j]-48)*pow(10,len-1);
-				
 				j++;
 				len--;
 			}
-//			printf("sum:%d\n",sum);
 			n=sum;
 			j= 5;
 			while(n>0)
@@ -399,32 +408,82 @@ int main()
 		}
 	}
 	
-	printf("-----Pass2-----\n");
-	for(i=0;i<endLine-1;i++)
+//	printf("-----Pass2-----\n");
+	fprintf(fpass2,"Loc\tSource code\t\tObject Code\n");
+	for(i=start;i<endLine-1;i++)
 	{
-		printf("%X\t%s\t%s\t%s\t",loc[i],label[i],instr[i],opper[i]);
-		for(j=0;j<6;j++)
-		{
-			
-			printf("%c",obj_16[i][j]);
-		}
-			
-		printf("\n");
+		fprintf(fpass2,"%X\t%s\t%s\t%s\t%s\n",loc[i],label[i],instr[i],opper[i],obj_16[i]);	
 	}
-	printf("\t%s\t%s\t%s\t",label[endLine-1],instr[endLine-1],opper[endLine-1]);
-		for(j=0;j<6;j++)
-			printf("%c",obj_16[i][j]);
-	printf("\n");
+	fprintf(fpass2, "\t%s\t%s\t%s\t\n",label[endLine-1],instr[endLine-1],opper[endLine-1]);
+
+	
+	fprintf(final,"H");
+	int codeSize = locctr-loc[start-1];
+	fprintf(final,"%s\t%06X%06X\n",label[start-1],loc[start-1],codeSize);
 	
 	
-	
+	int index=start;	//給每行計算大小的index 
+	int newLine = 1;	//上一個是否換行 
+	int record = 1;
+	int lineSize;
+
+	for(i=start;i<endLine;i++)
+	{
+		lineSize = loc[i+1]-loc[index];//當前行數大小 
+		if(record && strcmp(obj_16[i],"")!=0) 
+		{
+			fprintf(final,"T%06X",loc[i]);
+			index = i; 
+			record = 0;
+			newLine = 1;
+		}	
+		else if((strcmp(obj_16[i],"")==0 && newLine) && strcmp(instr[i],"END")!=0)
+		{
+			lineSize = loc[i]-loc[index];
+			fprintf(final,"%X",lineSize);
+			for(j=index;j<i;j++)
+			 	fprintf(final,"%s",obj_16[j]);
+			fprintf(final,"\n");
+			newLine = 0; 
+			record = 1;
+		}
+		else if(lineSize == 30 && newLine)
+		{
+			fprintf(final,"%02X",lineSize);
+			for(j=index;j<i+1;j++)
+			 	fprintf(final,"%s",obj_16[j]);
+			fprintf(final,"\n");
+			newLine = 0; 
+			record = 1;
+		}
+		else if(lineSize > 30 && newLine)
+		{
+			lineSize = loc[i]-loc[index];
+			fprintf(final,"%02X",lineSize);
+			for(j=index;j<i;j++)
+			 	fprintf(final,"%s",obj_16[j]);
+			fprintf(final,"\n");
+			newLine = 0; 
+			record = 1;
+			i--;
+			continue;
+		}
+		else if(strcmp(instr[i],"END")==0 && newLine)
+		{
+			lineSize = locctr-loc[index];
+			fprintf(final,"%02X",lineSize);
+			for(j=index;j<i;j++)
+			 	fprintf(final,"%s",obj_16[j]);
+			fprintf(final,"\n");
+		}
+	}
+	fprintf(final,"E%06X",loc[start-1]);
 	
 	return 0;
 } 
 
-
-
-void read_ver(FILE *fptr, char first[][10],char second[][10], char third[][10]) //將檔案以直行的方式讀取後，儲存於陣列中 
+//將檔案以直行的方式讀取後，儲存於陣列中 
+void read_ver(FILE *fptr, char first[][10],char second[][10], char third[][10]) 
 {
 	char nextline[100]="";
 	int line=0;
@@ -564,7 +623,6 @@ int opNum(char ch[])
 	{
 		if(strcmp(ch,opcode[i][0])==0)
 		{
-//			printf("opNum:%s\n",opcode[i][1]);
 			return hexToDec(opcode[i][1]);
 		}
 		
@@ -620,26 +678,20 @@ void decToBin(int n,int bin[24], int first , int last) //for Object code
 	
 	for(i=0;i<size;i++)
 		temp[i]=0;
-//	printf("num:%d\n",num);
 	i=0;
 	while(num>0)
 	{
 		temp[i]=num%2;
-//		printf("%d",temp[i]);
 		num /=2;
 		i++;
 	}
-//	printf("i:%d\n",i);
 	
 	j=size-1;
 
 	for(i=first;i<=last;i++)
 	{
 		bin[i]=temp[j];
-//		printf("%d",bin[i]);
 		j--;
 	}
 
 }
-
-
